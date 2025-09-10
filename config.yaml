@@ -1,0 +1,246 @@
+sensors:
+  obms:
+    - name: Novatel PwrPack 7
+      type: ethernet
+      ip: 192.168.1.147
+      topics:
+        - { name: /gnss, msg_type: sensor_msgs.msg.NavSatFix }
+      launch: novatel_launch
+
+    - name: xsens
+      type: usb
+      device_path: /dev/xsense_device
+      topics:
+        - { name: /xsens/imu/data, msg_type: sensor_msgs.msg.Imu }
+        - { name: /xsens/imu/mag, msg_type: sensor_msgs.msg.MagneticField }
+      launch: xsens_launch
+
+    - name: imu_rear
+      type: usb
+      device_path: /dev/xrear
+      topics:
+        - { name: /imu/rear/data, msg_type: sensor_msgs.msg.Imu }
+      launch: xsens_launch
+
+    - name: ublox
+      type: ethernet
+      ip: 192.168.1.10
+      topics:
+        - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
+        - { name: /ublox_gps_node/fix_velocity, msg_type: geometry_msgs.msg.TwistStamped }
+        - { name: /ublox_gps_node/navpvt, msg_type: ublox_msgs.msg.NavPVT }
+        # add more ublox topics here if needed
+      launch: ublox_launch
+
+    - name: PacMod
+      type: ethernet
+      ip: 192.168.1.10
+      topics:
+        - { name: /pacmod/gnss, msg_type: sensor_msgs.msg.NavSatFix }
+      launch: PacMod_launch
+
+  radars:
+    - { name: radar_front, type: ethernet, ip: 192.168.1.11,
+        topics: [ { name: /radar/front, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        launch: radar_launch }
+    - { name: radar_rear, type: ethernet, ip: 192.168.1.12,
+        topics: [ { name: /radar/rear, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        launch: radar_launch }
+    - { name: radar_left, type: ethernet, ip: 192.168.1.13,
+        topics: [ { name: /radar/left, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        launch: radar_launch }
+    - { name: radar_right, type: ethernet, ip: 192.168.1.14,
+        topics: [ { name: /radar/right, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        launch: radar_launch }
+    - { name: radar_front_left, type: ethernet, ip: 192.168.1.15,
+        topics: [ { name: /radar/front_left, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        launch: radar_launch }
+    - { name: radar_front_right, type: ethernet, ip: 192.168.1.16,
+        topics: [ { name: /radar/front_right, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        launch: radar_launch }
+    - { name: radar_rear_left, type: ethernet, ip: 192.168.1.17,
+        topics: [ { name: /radar/rear_left, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        launch: radar_launch }
+    - { name: radar_rear_right, type: ethernet, ip: 192.168.1.18,
+        topics: [ { name: /radar/rear_right, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        launch: radar_launch }
+    - { name: radar_center, type: ethernet, ip: 192.168.1.19,
+        topics: [ { name: /radar/center, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        launch: radar_launch }
+
+  lidars:
+    - name: livox_front
+      type: ethernet
+      ip: 192.168.1.100
+      topics:
+        - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
+      launch: livox_launch
+    - name: livox_bumper
+      type: ethernet
+      ip: 192.168.1.101
+      topics:
+        - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
+      launch: livox_launch
+    - name: livox_right
+      type: ethernet
+      ip: 192.168.1.102
+      topics:
+        - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
+      launch: livox_launch
+    - name: livox_left
+      type: ethernet
+      ip: 192.168.1.103
+      topics:
+        - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
+      launch: livox_launch
+    - name: hesai
+      type: ethernet
+      ip: 192.168.1.201
+      topics:
+        - { name: /lidar/rear/points, msg_type: sensor_msgs.msg.PointCloud2 }
+      launch: hesai_launch
+
+  cameras:
+    - name: Oak_Camera
+      type: ethernet
+      ip: 192.168.1.226
+      topics:
+        - { name: /camera/mono/image_raw, msg_type: sensor_msgs.msg.Image }
+      launch: camera_launch
+    - name: Event_Camera
+      type: usb
+      device_path: /dev/event_camera
+      topics:
+        - { name: /camera/event/image_raw, msg_type: sensor_msgs.msg.Image }
+      launch: event_camera_launch
+
+launch_files:
+  novatel_launch:
+    command: "ros2 launch novatel_oem7_driver oem7_port.launch.py oem7_port_name:=/dev/pwrpak7_device"
+    open_in_terminal: true
+
+  xsens_launch:
+    command: "ros2 launch xsens_mti_ros2_driver xsens_mti_node.launch.py"
+    open_in_terminal: true
+
+  ublox_launch:
+    command: "ros2 launch ublox_gps ublox_gps_node-launch_NavINST.py"
+    open_in_terminal: true
+
+  radar_launch:
+    command: "ros2 launch umrr_ros2_driver radar.launch.py"
+    open_in_terminal: true
+
+  livox_launch:
+    command: "ros2 launch livox_ros_driver2 msg_HAP_launch_multi.py"
+    open_in_terminal: true
+
+  hesai_launch:
+    command: "ros2 launch hesai_ros_driver start.py"
+    open_in_terminal: true
+
+  camera_launch:
+    command: "ros2 launch depthai_ros_driver camera_oak_d_LR_base.launch.py"
+    open_in_terminal: true
+
+  event_camera_launch:
+    command: "ros2 launch metavision_driver driver_node.launch.py"
+    open_in_terminal: true
+
+  PacMod_launch:
+    - command: "ros2 launch pacmod3 pacmod3.launch.xml"
+      open_in_terminal: true
+
+record_partitions:
+  OBMS:
+    topics:
+      # XSENS remapped topics
+      - /xsens/gnss
+      - /xsens/gnss_pose
+      - /xsens/filter/euler
+      - /xsens/filter/free_acceleration
+      - /xsens/filter/positionlla
+      - /xsens/filter/quaternion
+      - /xsens/filter/twist
+      - /xsens/filter/velocity
+      - /xsens/imu/acceleration
+      - /xsens/imu/angular_velocity
+      - /xsens/imu/data
+      - /xsens/imu/mag
+      - /xsens/imu/time_ref
+      - /xsens/imu/utctime
+      - /xsens/nmea
+      - /xsens/pressure
+      - /xsens/status
+      - /xsens/temperature
+      # Other GNSS/IMU topics
+      - /imu/rear/data
+      - /novatel/oem7/bestgnsspos
+      - /novatel/oem7/bestgnssvel
+      - /novatel/oem7/bestpos
+      - /novatel/oem7/fix
+      - /novatel/oem7/gps
+      - /novatel/oem7/imu/data
+      - /novatel/oem7/inspva
+      - /novatel/oem7/inspvax
+      - /novatel/oem7/time
+      # Ublox topics
+      - /ublox_gps_node/aidalm
+      - /ublox_gps_node/aideph
+      - /ublox_gps_node/diagnostics
+      - /ublox_gps_node/fix
+      - /ublox_gps_node/fix_velocity
+      - /ublox_gps_node/monhw
+      - /ublox_gps_node/navclock
+      - /ublox_gps_node/navcov
+      - /ublox_gps_node/navheading
+      - /ublox_gps_node/navpvt
+      - /ublox_gps_node/navrelposned
+      - /ublox_gps_node/navstate
+      - /ublox_gps_node/navstatus
+      - /ublox_gps_node/navsvin
+      - /ublox_gps_node/nmea
+      - /ublox_gps_node/parameter_events
+      - /ublox_gps_node/rosout
+      - /ublox_gps_node/rtcm
+      - /ublox_gps_node/rxmrtcm
+
+  radars:
+    topics:
+      - /smart_radar/port_targets_0
+      - /smart_radar/port_targets_1
+      - /smart_radar/port_targets_2
+      - /smart_radar/port_targets_3
+      - /smart_radar/port_targets_4
+      - /smart_radar/port_targets_5
+      - /smart_radar/port_targets_6
+      - /smart_radar/port_targets_7
+      - /smart_radar/port_targets_8
+
+  lidars:
+    topics:
+      - /livox/lidar/Bumper/imu
+      - /livox/lidar/Bumper/points
+      - /livox/lidar/Front/imu
+      - /livox/lidar/Front/points
+      - /livox/lidar/Left/imu
+      - /livox/lidar/Left/points
+      - /livox/lidar/Right/imu
+      - /livox/lidar/Right/points
+      - /hesai/lidar/packets_loss
+      - /hesai/lidar/points
+
+  cameras:
+    topics:
+      - /oak/imu/data
+      - /oak/left/camera_info
+      - /oak/left/image_raw/compressed
+      - /oak/rgb/camera_info
+      - /oak/rgb/image_raw/compressed
+      - /oak/right/camera_info
+      - /oak/right/image_raw/compressed
+      - /event_camera/events
+   pacmod:
+    topics:
+      - "/pacmod/.*_rpt"
+
