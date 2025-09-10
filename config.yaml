@@ -15,20 +15,11 @@ sensors:
         - { name: /xsens/imu/mag, msg_type: sensor_msgs.msg.MagneticField }
       launch: xsens_launch
 
-    - name: imu_rear
-      type: usb
-      device_path: /dev/xrear
-      topics:
-        - { name: /imu/rear/data, msg_type: sensor_msgs.msg.Imu }
-      launch: xsens_launch
-
     - name: ublox
       type: ethernet
       ip: 192.168.1.10
       topics:
         - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
-        - { name: /ublox_gps_node/fix_velocity, msg_type: geometry_msgs.msg.TwistStamped }
-        - { name: /ublox_gps_node/navpvt, msg_type: ublox_msgs.msg.NavPVT }
         # add more ublox topics here if needed
       launch: ublox_launch
 
@@ -40,31 +31,31 @@ sensors:
       launch: PacMod_launch
 
   radars:
-    - { name: radar_front, type: ethernet, ip: 192.168.1.11,
+    - { name: Passenger front radar, type: ethernet, ip: 192.168.1.4,
         topics: [ { name: /radar/front, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
-    - { name: radar_rear, type: ethernet, ip: 192.168.1.12,
+    - { name: Passenger front side radar, type: ethernet, ip: 192.168.1.5,
         topics: [ { name: /radar/rear, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
-    - { name: radar_left, type: ethernet, ip: 192.168.1.13,
+    - { name: Passenger rear side radar, type: ethernet, ip: 192.168.1.6,
         topics: [ { name: /radar/left, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
-    - { name: radar_right, type: ethernet, ip: 192.168.1.14,
+    - { name: Passenger rear radar, type: ethernet, ip: 192.168.1.7,
         topics: [ { name: /radar/right, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
-    - { name: radar_front_left, type: ethernet, ip: 192.168.1.15,
+    - { name: Driver rear radar, type: ethernet, ip: 192.168.1.8,
         topics: [ { name: /radar/front_left, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
-    - { name: radar_front_right, type: ethernet, ip: 192.168.1.16,
+    - { name: Driver rear side radar, type: ethernet, ip: 192.168.1.9,
         topics: [ { name: /radar/front_right, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
-    - { name: radar_rear_left, type: ethernet, ip: 192.168.1.17,
+    - { name: Driver front side radar, type: ethernet, ip: 192.168.1.10,
         topics: [ { name: /radar/rear_left, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
-    - { name: radar_rear_right, type: ethernet, ip: 192.168.1.18,
+    - { name: Driver front radar, type: ethernet, ip: 192.168.1.11,
         topics: [ { name: /radar/rear_right, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
-    - { name: radar_center, type: ethernet, ip: 192.168.1.19,
+    - { name: Center front radar, type: ethernet, ip: 192.168.1.19,
         topics: [ { name: /radar/center, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
 
@@ -75,24 +66,28 @@ sensors:
       topics:
         - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
       launch: livox_launch
+      
     - name: livox_bumper
       type: ethernet
       ip: 192.168.1.101
       topics:
         - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
       launch: livox_launch
+      
     - name: livox_right
       type: ethernet
       ip: 192.168.1.102
       topics:
         - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
       launch: livox_launch
+      
     - name: livox_left
       type: ethernet
       ip: 192.168.1.103
       topics:
         - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
       launch: livox_launch
+      
     - name: hesai
       type: ethernet
       ip: 192.168.1.201
@@ -107,6 +102,7 @@ sensors:
       topics:
         - { name: /camera/mono/image_raw, msg_type: sensor_msgs.msg.Image }
       launch: camera_launch
+      
     - name: Event_Camera
       type: usb
       device_path: /dev/event_camera
@@ -205,18 +201,6 @@ record_partitions:
       - /ublox_gps_node/rtcm
       - /ublox_gps_node/rxmrtcm
 
-  radars:
-    topics:
-      - /smart_radar/port_targets_0
-      - /smart_radar/port_targets_1
-      - /smart_radar/port_targets_2
-      - /smart_radar/port_targets_3
-      - /smart_radar/port_targets_4
-      - /smart_radar/port_targets_5
-      - /smart_radar/port_targets_6
-      - /smart_radar/port_targets_7
-      - /smart_radar/port_targets_8
-
   lidars:
     topics:
       - /livox/lidar/Bumper/imu
@@ -240,7 +224,12 @@ record_partitions:
       - /oak/right/camera_info
       - /oak/right/image_raw/compressed
       - /event_camera/events
+      
    pacmod:
     topics:
       - "/pacmod/.*_rpt"
+
+   radars:
+    topics:
+      - /smart_radar/port_targets_.+ 
 
