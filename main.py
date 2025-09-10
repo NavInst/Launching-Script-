@@ -5,10 +5,10 @@ import time
 import rclpy
 from rclpy.node import Node
 import yaml
-import os
-import math
 import importlib
 import PySimpleGUI as sg
+import math
+import os
 
 # --------------------------
 # Load config.yaml
@@ -25,10 +25,24 @@ SENSOR_TIMEOUT = 2.0
 LED_RADIUS = 20
 
 # --------------------------
-# Dynamic ROS msg type import
+# Detect ROS2 topic type dynamically
 # --------------------------
-def get_msg_type(type_str: str):
-    module_name, class_name = type_str.rsplit(".", 1)
+def get_topic_type(topic_name):
+    """Return the ROS2 type string for a topic, e.g., 'sensor_msgs/msg/Imu'"""
+    result = subprocess.run(
+        ["ros2", "topic", "type", topic_name],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        return result.stdout.strip()
+    return None
+
+def get_msg_class(topic_name):
+    """Dynamically import the message class for a topic"""
+    type_str = get_topic_type(topic_name)
+    if not type_str:
+        return None
+    module_name, class_name = type_str.replace('/', '.').rsplit('.', 1)
     module = importlib.import_module(module_name)
     return getattr(module, class_name)
 
@@ -50,19 +64,23 @@ def is_corrupted(value):
 class TopicMonitor(Node):
     def __init__(self, config):
         super().__init__('topic_monitor')
+
         for group, sensors in config["sensors"].items():
             for sensor in sensors:
                 if "topics" in sensor:
                     for t in sensor["topics"]:
                         topic = t["name"]
-                        msg_type = get_msg_type(t["msg_type"])
-                        self.create_subscription(
-                            msg_type,
-                            topic,
-                            lambda msg, top=topic: self.callback(msg, top),
-                            10
-                        )
-                        topic_status[topic] = {'last_time': None, 'is_corrupted': False}
+                        msg_type = get_msg_class(topic)
+                        if msg_type:
+                            self.create_subscription(
+                                msg_type,
+                                topic,
+                                lambda msg, top=topic: self.callback(msg, top),
+                                10
+                            )
+                            topic_status[topic] = {'last_time': None, 'is_corrupted': False}
+                        else:
+                            print(f"[WARNING] Could not detect type for topic: {topic}")
 
     def callback(self, msg, topic_name):
         if is_corrupted(msg):
@@ -152,7 +170,8 @@ def gui_thread():
                     for t in sensor["topics"]:
                         topic = t["name"]
                         if topic not in topic_status:
-                            continue
+                            topics_ok = False
+                            break
                         last = topic_status[topic]['last_time']
                         corrupted = topic_status[topic]['is_corrupted']
                         if corrupted or last is None or (now - last) > SENSOR_TIMEOUT:
@@ -195,4 +214,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

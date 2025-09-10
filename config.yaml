@@ -32,31 +32,31 @@ sensors:
 
   radars:
     - { name: Passenger front radar, type: ethernet, ip: 192.168.1.4,
-        topics: [ { name: /radar/front, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        topics: [ { name: /smart_radar/port_targets_pass_front, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
     - { name: Passenger front side radar, type: ethernet, ip: 192.168.1.5,
-        topics: [ { name: /radar/rear, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        topics: [ { name: /smart_radar/port_targets_front_pass_side, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
     - { name: Passenger rear side radar, type: ethernet, ip: 192.168.1.6,
-        topics: [ { name: /radar/left, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        topics: [ { name: /smart_radar/port_targets_pass_rear_side, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
     - { name: Passenger rear radar, type: ethernet, ip: 192.168.1.7,
-        topics: [ { name: /radar/right, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        topics: [ { name: /smart_radar/port_targets_pass_rear, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
     - { name: Driver rear radar, type: ethernet, ip: 192.168.1.8,
-        topics: [ { name: /radar/front_left, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        topics: [ { name: /smart_radar/port_targets_driver_rear, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
     - { name: Driver rear side radar, type: ethernet, ip: 192.168.1.9,
-        topics: [ { name: /radar/front_right, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        topics: [ { name: /smart_radar/port_targets_driver_rear_side, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
     - { name: Driver front side radar, type: ethernet, ip: 192.168.1.10,
-        topics: [ { name: /radar/rear_left, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        topics: [ { name: /smart_radar/port_targets_driver_front_side, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
     - { name: Driver front radar, type: ethernet, ip: 192.168.1.11,
-        topics: [ { name: /radar/rear_right, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        topics: [ { name: /smart_radar/port_targets_driver_front, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
     - { name: Center front radar, type: ethernet, ip: 192.168.1.19,
-        topics: [ { name: /radar/center, msg_type: geometry_msgs.msg.Vector3Stamped } ],
+        topics: [ { name: /smart_radar/port_targets_front_center, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
 
   lidars:
@@ -112,7 +112,7 @@ sensors:
 
 launch_files:
   novatel_launch:
-    command: "ros2 launch novatel_oem7_driver oem7_port.launch.py oem7_port_name:=/dev/pwrpak7_device"
+    command: "ros2 launch novatel_oem7_driver oem7_port.launch.py   oem7_port_name:=/dev/pwrpak7_device   oem7_receiver_log_file:="/home/ahmed/Desktop/Launching-Script-/nova_$(date +%Y_%m_%d-%H_%M_%S).gps""
     open_in_terminal: true
 
   xsens_launch:
@@ -224,12 +224,21 @@ record_partitions:
       - /oak/right/camera_info
       - /oak/right/image_raw/compressed
       - /event_camera/events
-      
-   pacmod:
+
+  pacmod:
     topics:
       - "/pacmod/.*_rpt"
 
-   radars:
+  radars:
     topics:
-      - /smart_radar/port_targets_.+ 
+      - /smart_radar/port_targets_driver_front
+      - /smart_radar/port_targets_driver_front_side
+      - /smart_radar/port_targets_driver_rear
+      - /smart_radar/port_targets_driver_rear_side
+      - /smart_radar/port_targets_front_center
+      - /smart_radar/port_targets_front_pass_side
+      - /smart_radar/port_targets_pass_front
+      - /smart_radar/port_targets_pass_rear
+      - /smart_radar/port_targets_pass_rear_side
+
 
