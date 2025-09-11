@@ -6,6 +6,10 @@
 cd "$(dirname "$0")"
 CONFIG_FILE="config.yaml"
 
+LAUNCH_DELAY=3   # seconds to wait after launching a driver
+BAG_RECORDING_DELAY=3 
+
+
 # -----------------------------------------
 # Colors
 # -----------------------------------------
@@ -44,6 +48,7 @@ launch_driver() {
     log "Launching driver: $name"
     echo -e "${YELLOW}→ Launching ${BOLD}$name${RESET}${YELLOW} in a new terminal tab...${RESET}"
     gnome-terminal --tab --title "$name" -- bash -c "$cmd; exec bash"
+    sleep "$LAUNCH_DELAY"
 }
 
 # -----------------------------------------
@@ -92,6 +97,7 @@ launch_recording() {
 
     echo -e "\033[92m✔ Recording started: $bag_name (PID: $pid)\033[0m"
     log "Recording started: $bag_name (PID: $pid)"
+    sleep "$BAG_RECORDING_DELAY"
 }
 
 

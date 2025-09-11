@@ -24,8 +24,8 @@ sensors:
       launch: ublox_launch
 
     - name: PacMod
-      type: ethernet
-      ip: 192.168.1.10
+      type: usb
+      device_path: /dev/kvaser_pacmod_device
       topics:
         - { name: /pacmod/gnss, msg_type: sensor_msgs.msg.NavSatFix }
       launch: PacMod_launch
@@ -105,14 +105,14 @@ sensors:
       
     - name: Event_Camera
       type: usb
-      device_path: /dev/event_camera
+      device_path: /dev/prophesee_evk4_device
       topics:
         - { name: /camera/event/image_raw, msg_type: sensor_msgs.msg.Image }
       launch: event_camera_launch
 
 launch_files:
   novatel_launch:
-    command: "ros2 launch novatel_oem7_driver oem7_port.launch.py   oem7_port_name:=/dev/pwrpak7_device   oem7_receiver_log_file:="/home/ahmed/Desktop/Launching-Script-/nova_$(date +%Y_%m_%d-%H_%M_%S).gps""
+    command: 'ros2 launch novatel_oem7_driver oem7_port.launch.py   oem7_port_name:=/dev/pwrpak7_device   oem7_receiver_log_file:="/home/ahmed/Desktop/Launching-Script-/nova_$(date +%Y_%m_%d-%H_%M_%S).gps"'
     open_in_terminal: true
 
   xsens_launch:
@@ -144,8 +144,8 @@ launch_files:
     open_in_terminal: true
 
   PacMod_launch:
-    - command: "ros2 launch pacmod3 pacmod3.launch.xml"
-      open_in_terminal: true
+    command: "ros2 launch pacmod3 pacmod3.launch.xml"
+    open_in_terminal: true
 
 record_partitions:
   OBMS:
@@ -200,6 +200,9 @@ record_partitions:
       - /ublox_gps_node/rosout
       - /ublox_gps_node/rtcm
       - /ublox_gps_node/rxmrtcm
+      
+      # PacMod 
+      - "/pacmod/.*_rpt"
 
   lidars:
     topics:
@@ -224,10 +227,6 @@ record_partitions:
       - /oak/right/camera_info
       - /oak/right/image_raw/compressed
       - /event_camera/events
-
-  pacmod:
-    topics:
-      - "/pacmod/.*_rpt"
 
   radars:
     topics:
