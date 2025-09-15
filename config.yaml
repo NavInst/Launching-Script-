@@ -9,7 +9,7 @@ sensors:
 
     - name: xsens
       type: usb
-      device_path: /dev/xsense_device
+      device_path: /dev/xsens_device 
       topics:
         - { name: /xsens/imu/data, msg_type: sensor_msgs.msg.Imu }
         - { name: /xsens/imu/mag, msg_type: sensor_msgs.msg.MagneticField }
@@ -55,7 +55,7 @@ sensors:
     - { name: Driver front radar, type: ethernet, ip: 192.168.1.11,
         topics: [ { name: /smart_radar/port_targets_driver_front, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
-    - { name: Center front radar, type: ethernet, ip: 192.168.1.19,
+    - { name: Center front radar, type: ethernet, ip: 192.168.1.12,
         topics: [ { name: /smart_radar/port_targets_front_center, msg_type: geometry_msgs.msg.Vector3Stamped } ],
         launch: radar_launch }
 
@@ -64,35 +64,35 @@ sensors:
       type: ethernet
       ip: 192.168.1.100
       topics:
-        - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
+        - { name: /livox/lidar/Front/points, msg_type: sensor_msgs.msg.PointCloud2 }
       launch: livox_launch
       
     - name: livox_bumper
       type: ethernet
       ip: 192.168.1.101
       topics:
-        - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
+        - { name: /livox/lidar/Bumper/points, msg_type: sensor_msgs.msg.PointCloud2 }
       launch: livox_launch
       
     - name: livox_right
       type: ethernet
       ip: 192.168.1.102
       topics:
-        - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
+        - { name: /livox/lidar/Right/points, msg_type: sensor_msgs.msg.PointCloud2 }
       launch: livox_launch
       
     - name: livox_left
       type: ethernet
       ip: 192.168.1.103
       topics:
-        - { name: /lidar/top/points, msg_type: sensor_msgs.msg.PointCloud2 }
+        - { name: /livox/lidar/Left/points, msg_type: sensor_msgs.msg.PointCloud2 }
       launch: livox_launch
       
     - name: hesai
       type: ethernet
       ip: 192.168.1.201
       topics:
-        - { name: /lidar/rear/points, msg_type: sensor_msgs.msg.PointCloud2 }
+        - { name: /hesai/lidar/points, msg_type: sensor_msgs.msg.PointCloud2}
       launch: hesai_launch
 
   cameras:
@@ -100,19 +100,19 @@ sensors:
       type: ethernet
       ip: 192.168.1.226
       topics:
-        - { name: /camera/mono/image_raw, msg_type: sensor_msgs.msg.Image }
+        - { name: /oak/imu/data, msg_type: sensor_msgs.msg.Imu}
       launch: camera_launch
       
     - name: Event_Camera
       type: usb
       device_path: /dev/prophesee_evk4_device
       topics:
-        - { name: /camera/event/image_raw, msg_type: sensor_msgs.msg.Image }
+        - { name: /event_camera/events, msg_type: sensor_msgs.msg.Image }
       launch: event_camera_launch
 
 launch_files:
   novatel_launch:
-    command: 'ros2 launch novatel_oem7_driver oem7_port.launch.py   oem7_port_name:=/dev/pwrpak7_device   oem7_receiver_log_file:="/home/ahmed/Desktop/Launching-Script-/nova_$(date +%Y_%m_%d-%H_%M_%S).gps"'
+    command: 'ros2 launch novatel_oem7_driver oem7_port.launch.py   oem7_port_name:=/dev/pwrpak7_device   oem7_receiver_log_file:="/home/navinst/Desktop/Launching-Script--main/nova_$(date +%Y_%m_%d-%H_%M_%S).gps"'
     open_in_terminal: true
 
   xsens_launch:
