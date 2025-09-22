@@ -1,5 +1,6 @@
 sensors:
   obms:
+  
     - name: ublox
       type: usb
       device_path: /dev/f9p_device
@@ -118,7 +119,7 @@ sensors:
 
 launch_files:
   novatel_launch:
-    command: 'ros2 launch novatel_oem7_driver oem7_port.launch.py   oem7_port_name:=/dev/pwrpak7_device   oem7_receiver_log_file:="/home/navinst/Desktop/Launching-Script--main/nova_$(date +%Y_%m_%d-%H_%M_%S).gps"'
+    command: "ros2 launch novatel_oem7_driver oem7_port.launch.py oem7_port_name:=/dev/pwrpak7_device oem7_receiver_log_file:=<bag_experiment>/nova_<timestamp>.gps"
     open_in_terminal: true
 
   xsens_launch:
@@ -231,22 +232,27 @@ record_partitions:
       - /pacmod/yaw_rate_rpt
 
 
-  lidars:
-    topics:
+      # Livox IMUs
       - /livox/lidar/Bumper/imu
-      - /livox/lidar/Bumper/points
       - /livox/lidar/Front/imu
-      - /livox/lidar/Front/points
       - /livox/lidar/Left/imu
-      - /livox/lidar/Left/points
       - /livox/lidar/Right/imu
+
+      #OAK IMU
+      - /oak/imu/data
+
+
+  lidars:
+    topics:   
+      - /livox/lidar/Bumper/points
+      - /livox/lidar/Front/points
+      - /livox/lidar/Left/points
       - /livox/lidar/Right/points
       - /hesai/lidar/packets_loss
       - /hesai/lidar/points
 
   cameras:
     topics:
-      - /oak/imu/data
       - /oak/left/camera_info
       - /oak/left/image_raw/compressed
       - /oak/rgb/camera_info

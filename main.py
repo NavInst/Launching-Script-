@@ -20,10 +20,15 @@ with open("config.yaml", "r") as f:
 # --------------------------
 # Globals
 # --------------------------
-topic_status = {}   # {"topic": {"last_time": float, "is_corrupted": bool}}
-sensor_status = {}  # {"sensor_name": bool}
+topic_status = {}    # {"topic": {"last_time": float, "is_corrupted": bool}}
+sensor_status = {}   # {"sensor_name": bool}
+status_lock = threading.Lock()  # Thread-safe access
 SENSOR_TIMEOUT = 2.0
 LED_RADIUS = 20
+
+# Debounce history
+SENSOR_STABLE_COUNT = 3
+sensor_color_history = {}  # {"sensor_name": [last_colors...]}
 
 # --------------------------
 # Detect ROS2 topic type dynamically
@@ -80,16 +85,17 @@ class TopicMonitor(Node):
                                 lambda msg, top=topic: self.callback(msg, top),
                                 qos_profile=qos_profile_sensor_data
                             )
-                            topic_status[topic] = {'last_time': None, 'is_corrupted': False}
+                            with status_lock:
+                                topic_status[topic] = {'last_time': None, 'is_corrupted': False}
                         else:
                             print(f"[WARNING] Could not detect type for topic: {topic}")
 
     def callback(self, msg, topic_name):
-        if is_corrupted(msg):
-            topic_status[topic_name]['is_corrupted'] = True
-        else:
-            topic_status[topic_name]['is_corrupted'] = False
-            topic_status[topic_name]['last_time'] = time.time()
+        corrupted = is_corrupted(msg)
+        with status_lock:
+            topic_status[topic_name]['is_corrupted'] = corrupted
+            if not corrupted:
+                topic_status[topic_name]['last_time'] = time.time()
 
 # --------------------------
 # USB / Ethernet checks
@@ -102,7 +108,7 @@ def sensor_check_thread():
                 stype = sensor["type"]
 
                 if stype == "usb":
-                    sensor_status[name] = os.path.exists(sensor["device_path"])
+                    status = os.path.exists(sensor["device_path"])
                 elif stype == "ethernet":
                     ip = sensor["ip"]
                     result = subprocess.run(
@@ -110,10 +116,27 @@ def sensor_check_thread():
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL
                     )
-                    sensor_status[name] = (result.returncode == 0)
+                    status = (result.returncode == 0)
                 else:
-                    sensor_status[name] = True
+                    status = True
+
+                with status_lock:
+                    sensor_status[name] = status
         time.sleep(1)
+
+# --------------------------
+# Debounce LED color
+# --------------------------
+def get_stable_color(name, color):
+    history = sensor_color_history.get(name, [])
+    history.append(color)
+    if len(history) > SENSOR_STABLE_COUNT:
+        history.pop(0)
+    sensor_color_history[name] = history
+    # Only change color if last N readings are same, otherwise yellow
+    if all(c == history[-1] for c in history):
+        return history[-1]
+    return 'yellow'
 
 # --------------------------
 # GUI
@@ -162,34 +185,37 @@ def gui_thread():
 
         now = time.time()
 
-        for group, sensors in CONFIG["sensors"].items():
-            for sensor in sensors:
-                name = sensor["name"]
-                device_ok = sensor_status.get(name, False)
+        with status_lock:
+            for group, sensors in CONFIG["sensors"].items():
+                for sensor in sensors:
+                    name = sensor["name"]
+                    device_ok = sensor_status.get(name, False)
 
-                topics_ok = True
-                if "topics" in sensor and len(sensor["topics"]) > 0:
-                    for t in sensor["topics"]:
-                        topic = t["name"]
-                        if topic not in topic_status:
-                            topics_ok = False
-                            break
-                        last = topic_status[topic]['last_time']
-                        corrupted = topic_status[topic]['is_corrupted']
-                        if corrupted or last is None or (now - last) > SENSOR_TIMEOUT:
-                            topics_ok = False
-                            break
+                    topics_ok = True
+                    if "topics" in sensor and len(sensor["topics"]) > 0:
+                        for t in sensor["topics"]:
+                            topic = t["name"]
+                            if topic not in topic_status:
+                                topics_ok = False
+                                break
+                            last = topic_status[topic]['last_time']
+                            corrupted = topic_status[topic]['is_corrupted']
+                            if corrupted or last is None or (now - last) > SENSOR_TIMEOUT:
+                                topics_ok = False
+                                break
 
-                if not device_ok:
-                    color = "red"
-                elif not topics_ok:
-                    color = "yellow"
-                else:
-                    color = "green"
+                    if not device_ok:
+                        color = "red"
+                    elif not topics_ok:
+                        color = "yellow"
+                    else:
+                        color = "green"
 
-                g = window[name]
-                g.erase()
-                g.draw_circle((LED_RADIUS,LED_RADIUS), LED_RADIUS, fill_color=color, line_color='black', line_width=2)
+                    stable_color = get_stable_color(name, color)
+                    g = window[name]
+                    g.erase()
+                    g.draw_circle((LED_RADIUS,LED_RADIUS), LED_RADIUS,
+                                  fill_color=stable_color, line_color='black', line_width=2)
 
     window.close()
 
