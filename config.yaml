@@ -1,5 +1,12 @@
 sensors:
   obms:
+    - name: Novatel PwrPack 7
+      type: ethernet
+      ip: 192.168.1.147
+      topics:
+        - { name: /novatel/oem7/inspva, msg_type: sensor_msgs.msg.NavSatFix }
+      launch: novatel_launch 
+
     - name: ublox
       type: usb
       device_path: /dev/f9p_device
@@ -7,12 +14,6 @@ sensors:
         - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
       launch: ublox_launch
 
-    - name: dummy
-      type: usb
-      device_path: /dev/f9p_device
-      topics:
-        - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
-      launch: ublox_launch
 
     - name: PacMod
       type: usb
@@ -28,12 +29,7 @@ sensors:
         - { name: /xsens/imu/data, msg_type: sensor_msgs.msg.Imu }
       launch: xsens_launch 
 
-    - name: Novatel PwrPack 7
-      type: ethernet
-      ip: 192.168.1.147
-      topics:
-        - { name: /novatel/oem7/inspva, msg_type: sensor_msgs.msg.NavSatFix }
-      launch: novatel_launch 
+    
 
   radars:
     - { name: Passenger front radar, type: ethernet, ip: 192.168.1.4,
@@ -107,8 +103,7 @@ sensors:
       topics:
         - { name: /oak/imu/data, msg_type: sensor_msgs.msg.Imu}
       launch: camera_launch
-
-  event_cameras:    
+ 
     - name: Event_Camera
       type: usb
       device_path: /dev/prophesee_evk4_device

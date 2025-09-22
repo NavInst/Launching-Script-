@@ -14,7 +14,7 @@ STORAGE_PATH="/mnt/Lex_Data1"
 # Colors
 # -----------------------------------------
 RESET="\e[0m"
-BOLD="\e[1m]"
+BOLD="\e[1m"
 WHITE="\e[97m"
 CYAN="\e[96m"
 YELLOW="\e[93m"
@@ -78,6 +78,7 @@ launch_driver() {
     sleep "$LAUNCH_DELAY"
 
     local pid=""
+    local i
     for i in {1..50}; do
         pid_candidate=$(grep -oP '\[\d{5}\]' "$tmp_log" | head -n1 | tr -d '[]')
         if [[ -n "$pid_candidate" ]]; then
@@ -121,6 +122,7 @@ launch_recording() {
 
     regex_topics=()
     normal_topics=()
+    local t
     for t in "${topics[@]}"; do
         if [[ "$t" == *".*"* ]]; then
             regex_topics+=("$t")
@@ -196,6 +198,8 @@ graceful_kill() {
     fi
 
     kill -SIGINT "$target" 2>/dev/null || true
+
+    local i
     for i in {1..25}; do
         ! kill -0 "$pid" 2>/dev/null && return
         sleep 0.2
@@ -203,6 +207,7 @@ graceful_kill() {
 
     log "$friendly still alive; sending SIGTERM"
     kill -SIGTERM "$target" 2>/dev/null || true
+
     for i in {1..15}; do
         ! kill -0 "$pid" 2>/dev/null && return
         sleep 0.2
@@ -225,6 +230,8 @@ cleanup() {
 
     log "User confirmed: Stopping all recordings and drivers"
 
+    local idx
+
     for idx in "${!recorder_pids[@]}"; do
         pid=${recorder_pids[$idx]}
         pgid=${recorder_pgids[$idx]}
@@ -232,6 +239,8 @@ cleanup() {
         [[ -n "$pid" ]] && graceful_kill "recorder-$idx" "$pid" "$pgid"
         [[ -n "$term_pid" ]] && kill "$term_pid" 2>/dev/null || true
     done
+
+    local name
 
     for name in "${!driver_pid_map[@]}"; do
         pid="${driver_pid_map[$name]}"
@@ -259,20 +268,23 @@ declare -A launched_sensors
 declare -A launched_launch_files
 
 groups=$(yq e '.sensors | keys | .[]' "$CONFIG_FILE")
+local group
+
+
 for group in $groups; do
     sensor_count=$(yq e ".sensors.$group | length" "$CONFIG_FILE")
     echo "DEBUG: Processing group '$group' with $sensor_count sensors" | tee -a "$LOG_FILE"
-
-    for ((i=0; i<sensor_count; i++)); do
-        echo "DEBUG: ===== Processing sensor index $i in group $group =====" | tee -a "$LOG_FILE"
-        sensor_name=$(yq e ".sensors.$group[$i].name" "$CONFIG_FILE" 2>/dev/null)
-        launch_ref=$(yq e ".sensors.$group[$i].launch" "$CONFIG_FILE" 2>/dev/null)
+    local j
+    for ((j=0; j<sensor_count; j++)); do
+        echo "DEBUG: ===== Processing sensor index $j in group $group =====" | tee -a "$LOG_FILE"
+        sensor_name=$(yq e ".sensors.$group[$j].name" "$CONFIG_FILE" 2>/dev/null)
+        launch_ref=$(yq e ".sensors.$group[$j].launch" "$CONFIG_FILE" 2>/dev/null)
         echo "DEBUG: Raw sensor_name: '$sensor_name'" | tee -a "$LOG_FILE"
         echo "DEBUG: Raw launch_ref: '$launch_ref'" | tee -a "$LOG_FILE"
         [[ -z "$sensor_name" || "$sensor_name" == "null" ]] && continue
         [[ -z "$launch_ref" || "$launch_ref" == "null" ]] && continue
 
-        sensor_id="${group}_${i}_${sensor_name}"
+        sensor_id="${group}_${j}_${sensor_name}"
         echo "DEBUG: Created sensor_id: '$sensor_id'" | tee -a "$LOG_FILE"
 
         [[ "${skipped_sensors[$sensor_id]}" == "1" ]] && continue
@@ -303,15 +315,22 @@ for group in $groups; do
         launch_driver "$cmd" "${sensor_name}_${launch_ref}"
         launched_sensors["$sensor_id"]=1
         launched_launch_files["$launch_ref"]=1
-        sleep 0.25
+        sleep 0.5
     done
 done
 
-echo -e "${CYAN}→ Launching GUI...${RESET}"
-launch_gui
 print_header
+read -p "Do you want to launch GUI? (y/n): " gui_launch_choice
 
+if [[ "$gui_launch_choice" =~ ^[Yy]$ ]]; then
+    echo -e "${CYAN}→ Launching GUI...${RESET}"
+    launch_gui
+fi
+
+print_header
 read -p "Do you want to start bag recording? (y/n): " record_choice
+
+local part
 if [[ "$record_choice" =~ ^[Yy]$ ]]; then
     partitions=$(yq e '.record_partitions | keys | .[]' "$CONFIG_FILE")
     for part in $partitions; do
