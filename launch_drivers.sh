@@ -14,7 +14,7 @@ STORAGE_PATH="/mnt/Lex_Data1"
 # Colors
 # -----------------------------------------
 RESET="\e[0m"
-BOLD="\e[1m"
+BOLD="\e[1m]"
 WHITE="\e[97m"
 CYAN="\e[96m"
 YELLOW="\e[93m"
@@ -28,7 +28,7 @@ GRAY="\e[90m"
 read -p "Enter experiment name: " EXP_NAME
 EXPERIMENT_TIMESTAMP=$(date +%Y_%m_%d-%H_%M_%S)
 
-# define exp folder and make the folder
+# Define experiment folder and make the folder
 EXP_DIR="${EXP_NAME}_${EXPERIMENT_TIMESTAMP}"
 mkdir -p "$STORAGE_PATH/bags/$EXP_DIR"
 
@@ -60,21 +60,10 @@ declare -A driver_pgid_map
 launch_driver() {
     local cmd="$1"
     local name="$2"
+
     # Replace placeholders
     cmd="${cmd//<bag_experiment>/$STORAGE_PATH/bags/$EXP_DIR}"
-    cmd="${cmd//<timestamp>/${EXPERIMENT_TIMESTAMP}}"
-
-	# Ensure the folder exists
-    gps_file=$(echo "$cmd" | grep -oP 'oem7_receiver_log_file:=\S+')
-    gps_dir=$(dirname "${gps_file#oem7_receiver_log_file:=}")
-	mkdir -p "$gps_dir"# Replace placeholders
-    cmd="${cmd//<bag_experiment>/$STORAGE_PATH/bags/$EXP_DIR}"
-    cmd="${cmd//<timestamp>/${EXPERIMENT_TIMESTAMP}}"
-
-	# Ensure the folder exists
-    gps_file=$(echo "$cmd" | grep -oP 'oem7_receiver_log_file:=\S+')
-    gps_dir=$(dirname "${gps_file#oem7_receiver_log_file:=}")
-    mkdir -p "$gps_dir"
+    cmd="${cmd//<timestamp>/$EXPERIMENT_TIMESTAMP}"
 
     log "Preparing driver: $name"
     echo -e "${YELLOW}→ Preparing ${BOLD}$name${RESET}${YELLOW} to launch in a tab...${RESET}"
@@ -86,7 +75,6 @@ launch_driver() {
     gnome-terminal --tab --title="$name" -- bash -c "$cmd 2>&1 | tee $tmp_log" &
     local term_pid=$!
     driver_terminal_pid_map["$name"]=$term_pid
-
     sleep "$LAUNCH_DELAY"
 
     local pid=""
@@ -124,7 +112,6 @@ launch_recording() {
     local partition_name="$1"
     shift
     local topics=("$@")
-
     local bag_name="${EXP_DIR}/${partition_name}"
     local bag_dir="$STORAGE_PATH/bags/$bag_name"
     mkdir -p "$(dirname "$bag_dir")"
@@ -182,7 +169,7 @@ launch_gui() {
     echo -e "${YELLOW}→ Launching Sensor Dashboard GUI...${RESET}"
     log "Launching Sensor Dashboard GUI"
     gnome-terminal --tab --title "Sensor Dashboard" -- bash -c "python3 main.py" &
-    sleep 0.5
+    sleep "$LAUNCH_DELAY"
     gui_pid=$(pgrep -f "python3 main.py" | head -n1 || true)
     log "GUI PID (approx): $gui_pid"
 }
@@ -197,10 +184,7 @@ graceful_kill() {
     local friendly="${4:-$name}"
 
     [[ -z "$pid" ]] && return
-
-    if ! kill -0 "$pid" 2>/dev/null; then
-        return
-    fi
+    if ! kill -0 "$pid" 2>/dev/null; then return; fi
 
     local target
     if [[ -n "$pgid" ]]; then
@@ -233,7 +217,6 @@ graceful_kill() {
 # -----------------------------------------
 cleanup() {
     echo -e "${RED}\n[!] Attempting to stop all recordings and drivers...${RESET}"
-
     read -p "Are you sure you want to kill all processes? (y/n): " kill_choice
     if [[ ! "$kill_choice" =~ ^[Yy]$ ]]; then
         echo -e "${CYAN}Cleanup cancelled. Processes are still running.${RESET}"
@@ -264,24 +247,12 @@ cleanup() {
 trap cleanup SIGINT SIGTERM EXIT
 
 # -----------------------------------------
-# Python venv activation
-# -----------------------------------------
-VENV_PATH="/home/navinst/Desktop/Launching-Script--main/LaunchScript"
-if [[ -f "$VENV_PATH/bin/activate" ]]; then
-    log "Activating Python virtual environment at $VENV_PATH"
-    source "$VENV_PATH/bin/activate"
-else
-    echo -e "${RED}⌘ Virtual environment not found at $VENV_PATH${RESET}"
-    log "Virtual environment not found at $VENV_PATH"
-fi
-
-# -----------------------------------------
 # Launch all drivers - FIXED LOGIC
 # -----------------------------------------
 print_header
-read -p "Do you want to launch ALL sensors automatically? (y/n): " launch_all_choice
+# read -p "Do you want to launch ALL sensors automatically? (y/n): " launch_all_choice
 launch_all=false
-[[ "$launch_all_choice" =~ ^[Yy]$ ]] && launch_all=true
+# [[ "$launch_all_choice" =~ ^[Yy]$ ]] && launch_all=true
 
 declare -A skipped_sensors
 declare -A launched_sensors
@@ -291,14 +262,13 @@ groups=$(yq e '.sensors | keys | .[]' "$CONFIG_FILE")
 for group in $groups; do
     sensor_count=$(yq e ".sensors.$group | length" "$CONFIG_FILE")
     echo "DEBUG: Processing group '$group' with $sensor_count sensors" | tee -a "$LOG_FILE"
+
     for ((i=0; i<sensor_count; i++)); do
         echo "DEBUG: ===== Processing sensor index $i in group $group =====" | tee -a "$LOG_FILE"
-
         sensor_name=$(yq e ".sensors.$group[$i].name" "$CONFIG_FILE" 2>/dev/null)
         launch_ref=$(yq e ".sensors.$group[$i].launch" "$CONFIG_FILE" 2>/dev/null)
         echo "DEBUG: Raw sensor_name: '$sensor_name'" | tee -a "$LOG_FILE"
         echo "DEBUG: Raw launch_ref: '$launch_ref'" | tee -a "$LOG_FILE"
-
         [[ -z "$sensor_name" || "$sensor_name" == "null" ]] && continue
         [[ -z "$launch_ref" || "$launch_ref" == "null" ]] && continue
 
@@ -313,7 +283,6 @@ for group in $groups; do
         [[ "$cmd" == "null" || -z "$cmd" ]] && continue
 
         print_header
-
         if [[ "$launch_all" == false ]]; then
             [[ "${launched_launch_files[$launch_ref]}" == "1" ]] && {
                 log "Launch file $launch_ref already running, marking $sensor_name as launched without prompting user"
@@ -321,7 +290,6 @@ for group in $groups; do
                 echo -e "${CYAN}→ $sensor_name ($launch_ref) already running, skipping...${RESET}"
                 continue
             }
-
             read -p "Launch $sensor_name ($launch_ref)? (y/n): " choice
             [[ ! "$choice" =~ ^[Yy]$ ]] && skipped_sensors[$sensor_id]=1 && continue
         fi
@@ -339,24 +307,19 @@ for group in $groups; do
     done
 done
 
-extra_count=$(yq e ".launch_files.extra_launch_files | length" "$CONFIG_FILE")
-for ((i=0; i<extra_count; i++)); do
-    cmd=$(yq e ".launch_files.extra_launch_files[$i].command" "$CONFIG_FILE")
-    [[ "$launch_all" == false ]] && read -p "Launch extra driver? (y/n): " choice && [[ ! "$choice" =~ ^[Yy]$ ]] && continue
-    launch_driver "$cmd" "extra_$i"
-done
-
 echo -e "${CYAN}→ Launching GUI...${RESET}"
 launch_gui
-
 print_header
+
 read -p "Do you want to start bag recording? (y/n): " record_choice
 if [[ "$record_choice" =~ ^[Yy]$ ]]; then
     partitions=$(yq e '.record_partitions | keys | .[]' "$CONFIG_FILE")
     for part in $partitions; do
         topics=$(yq e ".record_partitions.$part.topics[]" "$CONFIG_FILE")
         topic_array=()
-        while IFS= read -r t; do [[ -n "$t" ]] && topic_array+=("$t"); done <<< "$topics"
+        while IFS= read -r t; do
+            [[ -n "$t" ]] && topic_array+=("$t")
+        done <<< "$topics"
         launch_recording "$part" "${topic_array[@]}"
     done
     echo -e "${GREEN}System running with recording. Press 'S' then Enter to stop...${RESET}"
@@ -370,4 +333,3 @@ while true; do
 done
 
 echo -e "${GREEN}All processes terminated.${RESET}"
-
