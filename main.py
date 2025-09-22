@@ -4,6 +4,7 @@ import threading
 import time
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 import yaml
 import importlib
 import PySimpleGUI as sg
@@ -72,11 +73,12 @@ class TopicMonitor(Node):
                         topic = t["name"]
                         msg_type = get_msg_class(topic)
                         if msg_type:
+                            # Use sensor QoS to avoid RELIABILITY_QOS_POLICY warnings
                             self.create_subscription(
                                 msg_type,
                                 topic,
                                 lambda msg, top=topic: self.callback(msg, top),
-                                10
+                                qos_profile=qos_profile_sensor_data
                             )
                             topic_status[topic] = {'last_time': None, 'is_corrupted': False}
                         else:
@@ -214,3 +216,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

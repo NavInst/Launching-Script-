@@ -1,34 +1,39 @@
 sensors:
   obms:
+    - name: ublox
+      type: usb
+      device_path: /dev/f9p_device
+      topics:
+        - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
+      launch: ublox_launch
+
+    - name: dummy
+      type: usb
+      device_path: /dev/f9p_device
+      topics:
+        - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
+      launch: ublox_launch
+
     - name: Novatel PwrPack 7
       type: ethernet
       ip: 192.168.1.147
       topics:
-        - { name: /gnss, msg_type: sensor_msgs.msg.NavSatFix }
-      launch: novatel_launch
-
-    - name: xsens
-      type: usb
-      device_path: /dev/xsens_device 
-      topics:
-        - { name: /xsens/imu/data, msg_type: sensor_msgs.msg.Imu }
-        - { name: /xsens/imu/mag, msg_type: sensor_msgs.msg.MagneticField }
-      launch: xsens_launch
-
-    - name: ublox
-      type: ethernet
-      ip: 192.168.1.10
-      topics:
-        - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
-        # add more ublox topics here if needed
-      launch: ublox_launch
+        - { name: /novatel/oem7/inspva, msg_type: sensor_msgs.msg.NavSatFix }
+      launch: novatel_launch 
 
     - name: PacMod
       type: usb
       device_path: /dev/kvaser_pacmod_device
       topics:
-        - { name: /pacmod/gnss, msg_type: sensor_msgs.msg.NavSatFix }
+        - { name: /pacmod/steering_rpt, msg_type: sensor_msgs.msg.NavSatFix }
       launch: PacMod_launch
+      
+    - name: xsens
+      type: usb
+      device_path: /dev/xsens_device 
+      topics:
+        - { name: /xsens/imu/data, msg_type: sensor_msgs.msg.Imu }
+      launch: xsens_launch 
 
   radars:
     - { name: Passenger front radar, type: ethernet, ip: 192.168.1.4,
@@ -85,7 +90,7 @@ sensors:
       type: ethernet
       ip: 192.168.1.103
       topics:
-        - { name: /livox/lidar/Left/points, msg_type: sensor_msgs.msg.PointCloud2 }
+        - { name: /livox/lidar/Left/points, msg_type: sensor_msgs.msg.PointCloud2}
       launch: livox_launch
       
     - name: hesai
@@ -102,7 +107,8 @@ sensors:
       topics:
         - { name: /oak/imu/data, msg_type: sensor_msgs.msg.Imu}
       launch: camera_launch
-      
+
+  event_cameras:    
     - name: Event_Camera
       type: usb
       device_path: /dev/prophesee_evk4_device
@@ -202,7 +208,28 @@ record_partitions:
       - /ublox_gps_node/rxmrtcm
       
       # PacMod 
-      - "/pacmod/.*_rpt"
+      - /pacmod/accel_aux_rpt
+      - /pacmod/accel_rpt
+      - /pacmod/all_system_statuses
+      - /pacmod/brake_aux_rpt
+      - /pacmod/brake_rpt
+      - /pacmod/component_rpt
+      - /pacmod/date_time_rpt
+      - /pacmod/enabled
+      - /pacmod/global_rpt
+      - /pacmod/lat_lon_heading_rpt
+      - /pacmod/pacmod/transition_event
+      - /pacmod/shift_aux_rpt
+      - /pacmod/shift_rpt
+      - /pacmod/steering_aux_rpt
+      - /pacmod/steering_rpt
+      - /pacmod/turn_aux_rpt
+      - /pacmod/turn_rpt
+      - /pacmod/vehicle_speed_rpt
+      - /pacmod/vin_rpt
+      - /pacmod/wheel_speed_rpt
+      - /pacmod/yaw_rate_rpt
+
 
   lidars:
     topics:
