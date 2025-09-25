@@ -7,9 +7,9 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 import yaml
 import importlib
-import PySimpleGUI as sg
 import math
 import os
+import tkinter as tk
 
 # --------------------------
 # Load config.yaml
@@ -78,7 +78,7 @@ class TopicMonitor(Node):
                         topic = t["name"]
                         msg_type = get_msg_class(topic)
                         if msg_type:
-                            # Use sensor QoS to avoid RELIABILITY_QOS_POLICY warnings
+                            print(f"[INFO] Subscriping to: {topic}")
                             self.create_subscription(
                                 msg_type,
                                 topic,
@@ -133,58 +133,63 @@ def get_stable_color(name, color):
     if len(history) > SENSOR_STABLE_COUNT:
         history.pop(0)
     sensor_color_history[name] = history
-    # Only change color if last N readings are same, otherwise yellow
     if all(c == history[-1] for c in history):
         return history[-1]
-    return 'yellow'
+    return '#FFD93D'  # amber as transitional
 
 # --------------------------
-# GUI
+# GUI with Tkinter
 # --------------------------
-def gui_thread():
-    sg.theme('DarkBlue3')
-    group_columns = []
+class Dashboard(tk.Tk):
+    def __init__(self, config):
+        super().__init__()
+        self.title("NavINST Sensor Launch")
+        self.configure(bg="#6389AC")
 
-    for group, sensors in CONFIG["sensors"].items():
-        col_layout = [[sg.Text(group.upper(), font=('Any', 14), text_color='yellow')]]
-        for sensor in sensors:
-            col_layout.append([
-                sg.Text(sensor["name"], size=(18,1), font=('Any',12)),
-                sg.Graph(
-                    canvas_size=(LED_RADIUS*2,LED_RADIUS*2),
-                    graph_bottom_left=(0,0),
-                    graph_top_right=(LED_RADIUS*2,LED_RADIUS*2),
-                    background_color='black',
-                    key=sensor["name"]
-                )
-            ])
-        col_layout.append([sg.HorizontalSeparator()])
-        group_columns.append(
-            sg.Column(col_layout, vertical_scroll_only=False, expand_y=True, expand_x=True, pad=(5,5))
-        )
+        title = tk.Label(self, text="Sensor Dashboard",
+                         font=("Arial", 20, "bold"),
+                         fg="white", bg="#6389AC")
+        title.pack(pady=10)
 
-    layout = [
-        [sg.Text('Sensor Dashboard', font=('Any', 18), justification='center', expand_x=True)],
-        [sg.HorizontalSeparator()],
-        group_columns
-    ]
+        container = tk.Frame(self, bg="#6389AC")
+        container.pack(fill="both", expand=True)
 
-    window = sg.Window(
-        'Sensor Dashboard',
-        layout,
-        finalize=True,
-        resizable=True,
-        element_justification="center",
-        font=('Any', 11)
-    )
+        self.sensor_widgets = {}
 
-    while True:
-        event, _ = window.read(timeout=200)
-        if event == sg.WINDOW_CLOSED:
-            break
+        # Groups horizontally, sensors vertically inside each group
+        for group, sensors in config["sensors"].items():
+            group_frame = tk.LabelFrame(container, text=group.upper(),
+                                        font=("Arial", 14, "bold"),
+                                        fg="white", bg="#6389AC",
+                                        labelanchor="n", bd=2, relief="groove")
+            group_frame.pack(side="left", padx=15, pady=5, fill="y")
 
+            for sensor in sensors:
+                row = tk.Frame(group_frame, bg="#6389AC")
+                row.pack(anchor="w", pady=4)
+
+                tk.Label(row, text=sensor["name"],
+                         font=("Arial", 12), width=22,
+                         anchor="w", bg="#6389AC", fg="white", padx=30, pady=5).pack(side="left")
+
+                canvas = tk.Canvas(row, width=LED_RADIUS*2,
+                                   height=LED_RADIUS*2, bg="#6389AC",
+                                   highlightthickness=0)
+                canvas.pack(side="left", padx=5)
+                circle = canvas.create_oval(2, 2, LED_RADIUS*2, LED_RADIUS*2,
+                                            fill="#FF0000", outline="black")
+
+                self.sensor_widgets[sensor["name"]] = (canvas, circle)
+
+        self.after(200, self.update_loop)
+
+    def update_sensor(self, name, color):
+        if name in self.sensor_widgets:
+            canvas, circle = self.sensor_widgets[name]
+            canvas.itemconfig(circle, fill=color)
+
+    def update_loop(self):
         now = time.time()
-
         with status_lock:
             for group, sensors in CONFIG["sensors"].items():
                 for sensor in sensors:
@@ -205,19 +210,16 @@ def gui_thread():
                                 break
 
                     if not device_ok:
-                        color = "red"
+                        color = "#FF0000"   # bright red
                     elif not topics_ok:
-                        color = "yellow"
+                        color = "#FFFB00"    # amber/yellow
                     else:
-                        color = "green"
+                        color = "#00FF00"   # bright green
 
                     stable_color = get_stable_color(name, color)
-                    g = window[name]
-                    g.erase()
-                    g.draw_circle((LED_RADIUS,LED_RADIUS), LED_RADIUS,
-                                  fill_color=stable_color, line_color='black', line_width=2)
+                    self.update_sensor(name, stable_color)
 
-    window.close()
+        self.after(200, self.update_loop)
 
 # --------------------------
 # Main
@@ -225,20 +227,18 @@ def gui_thread():
 def main():
     rclpy.init()
 
-    # Start topic monitor in background
     monitor = TopicMonitor(CONFIG)
     ros_thread = threading.Thread(target=rclpy.spin, args=(monitor,), daemon=True)
     ros_thread.start()
 
-    # Start device checks
     threading.Thread(target=sensor_check_thread, daemon=True).start()
 
-    # Run GUI in main thread
-    gui_thread()
+    dashboard = Dashboard(CONFIG)
+    dashboard.mainloop()
 
-    # Cleanup
     monitor.destroy_node()
     rclpy.shutdown()
 
 if __name__ == "__main__":
     main()
+

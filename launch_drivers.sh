@@ -132,9 +132,9 @@ launch_recording() {
     done
 
     if [[ ${#regex_topics[@]} -gt 0 ]]; then
-        rec_cmd="ros2 bag record --storage mcap -o \"$bag_dir\" --regex ${regex_topics[@]}"
+        rec_cmd="ros2 bag record --storage sqlite3 -o \"$bag_dir\" --regex ${regex_topics[@]}"
     else
-        rec_cmd="ros2 bag record --storage mcap -o \"$bag_dir\" ${normal_topics[*]}"
+        rec_cmd="ros2 bag record --storage sqlite3 -o \"$bag_dir\" ${normal_topics[*]}"
     fi
 
     gnome-terminal --tab --title="Recording $partition_name" \

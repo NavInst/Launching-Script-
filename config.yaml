@@ -1,8 +1,8 @@
 sensors:
   obms:
     - name: Novatel PwrPack 7
-      type: ethernet
-      ip: 192.168.1.147
+      type: usb
+      device_path: /dev/pwrpak7_device
       topics:
         - { name: /novatel/oem7/inspva, msg_type: sensor_msgs.msg.NavSatFix }
       launch: novatel_launch 
