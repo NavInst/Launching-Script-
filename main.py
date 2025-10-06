@@ -112,7 +112,7 @@ def sensor_check_thread():
                 elif stype == "ethernet":
                     ip = sensor["ip"]
                     result = subprocess.run(
-                        ["ping", "-c", "1", "-W", "1", ip],
+                        ["ping", "-c", "1", "-W", "10", ip],
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL
                     )

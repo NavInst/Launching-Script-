@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 CONFIG_FILE="config.yaml"
 LAUNCH_DELAY=3
 BAG_RECORDING_DELAY=3
-STORAGE_PATH="/mnt/Lex_Data1"
+STORAGE_PATH="/media/navinst/Lex_Data2"
 
 # -----------------------------------------
 # Colors
@@ -37,8 +37,9 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/${EXP_DIR}.log"
 
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
+
 
 print_header() {
     clear
@@ -268,56 +269,87 @@ declare -A launched_sensors
 declare -A launched_launch_files
 
 groups=$(yq e '.sensors | keys | .[]' "$CONFIG_FILE")
-local group
-
 
 for group in $groups; do
     sensor_count=$(yq e ".sensors.$group | length" "$CONFIG_FILE")
     echo "DEBUG: Processing group '$group' with $sensor_count sensors" | tee -a "$LOG_FILE"
+
     local j
     for ((j=0; j<sensor_count; j++)); do
         echo "DEBUG: ===== Processing sensor index $j in group $group =====" | tee -a "$LOG_FILE"
+
         sensor_name=$(yq e ".sensors.$group[$j].name" "$CONFIG_FILE" 2>/dev/null)
         launch_ref=$(yq e ".sensors.$group[$j].launch" "$CONFIG_FILE" 2>/dev/null)
-        echo "DEBUG: Raw sensor_name: '$sensor_name'" | tee -a "$LOG_FILE"
-        echo "DEBUG: Raw launch_ref: '$launch_ref'" | tee -a "$LOG_FILE"
+
         [[ -z "$sensor_name" || "$sensor_name" == "null" ]] && continue
         [[ -z "$launch_ref" || "$launch_ref" == "null" ]] && continue
 
         sensor_id="${group}_${j}_${sensor_name}"
-        echo "DEBUG: Created sensor_id: '$sensor_id'" | tee -a "$LOG_FILE"
 
         [[ "${skipped_sensors[$sensor_id]}" == "1" ]] && continue
         [[ "${launched_sensors[$sensor_id]}" == "1" ]] && continue
 
         cmd=$(yq e ".launch_files.$launch_ref.command" "$CONFIG_FILE" 2>/dev/null)
-        echo "DEBUG: Command for $launch_ref: '$cmd'" | tee -a "$LOG_FILE"
         [[ "$cmd" == "null" || -z "$cmd" ]] && continue
 
         print_header
         if [[ "$launch_all" == false ]]; then
             [[ "${launched_launch_files[$launch_ref]}" == "1" ]] && {
-                log "Launch file $launch_ref already running, marking $sensor_name as launched without prompting user"
-                launched_sensors["$sensor_id"]=1
                 echo -e "${CYAN}→ $sensor_name ($launch_ref) already running, skipping...${RESET}"
+                launched_sensors["$sensor_id"]=1
                 continue
             }
+
             read -p "Launch $sensor_name ($launch_ref)? (y/n): " choice
-            [[ ! "$choice" =~ ^[Yy]$ ]] && skipped_sensors[$sensor_id]=1 && continue
+            if [[ ! "$choice" =~ ^[Yy]$ ]]; then
+                skipped_sensors[$sensor_id]=1
+                continue
+            fi
+
+            # ✅ Show pre-launch comment (if any)
+            pre_comment=$(yq e ".sensors.$group[$j].pre_comment" "$CONFIG_FILE" 2>/dev/null)
+            if [[ "$pre_comment" != "null" && -n "$pre_comment" ]]; then
+                echo
+                echo -e "${CYAN}${BOLD}────────────────────────────────────────────────────${RESET}"
+                echo -e "${CYAN}${BOLD}→ Pre-launch note for $sensor_name:${RESET}"
+                echo -e "   ${WHITE}$pre_comment${RESET}"
+                echo -e "${CYAN}${BOLD}────────────────────────────────────────────────────${RESET}"
+                echo
+                read -p "Press Enter to continue with the launch..." _
+                echo
+            fi
         fi
 
         [[ "${launched_launch_files[$launch_ref]}" == "1" ]] && {
-            log "Launch file $launch_ref already running, marking $sensor_name as launched without starting new process"
             launched_sensors["$sensor_id"]=1
             continue
         }
 
+        # ✅ Launch the driver
         launch_driver "$cmd" "${sensor_name}_${launch_ref}"
         launched_sensors["$sensor_id"]=1
         launched_launch_files["$launch_ref"]=1
         sleep 0.5
+
+        # ✅ Show post-launch comment (if any)
+        post_comment=$(yq e ".sensors.$group[$j].post_comment" "$CONFIG_FILE" 2>/dev/null)
+        if [[ "$post_comment" != "null" && -n "$post_comment" ]]; then
+            echo
+            echo -e "${GREEN}${BOLD}────────────────────────────────────────────────────${RESET}"
+            echo -e "${GREEN}${BOLD}→ Post-launch note for $sensor_name:${RESET}"
+            echo -e "   ${WHITE}$post_comment${RESET}"
+            echo -e "${GREEN}${BOLD}────────────────────────────────────────────────────${RESET}"
+            echo
+            sleep 3
+        fi
+
+        # ✅ Pause before next launch
+        echo
+        read -p "Press Enter to proceed to the next launch..." _
+        echo
     done
 done
+
 
 print_header
 read -p "Do you want to launch GUI? (y/n): " gui_launch_choice
@@ -330,7 +362,6 @@ fi
 print_header
 read -p "Do you want to start bag recording? (y/n): " record_choice
 
-local part
 if [[ "$record_choice" =~ ^[Yy]$ ]]; then
     partitions=$(yq e '.record_partitions | keys | .[]' "$CONFIG_FILE")
     for part in $partitions; do

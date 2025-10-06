@@ -6,6 +6,8 @@ sensors:
       topics:
         - { name: /novatel/oem7/inspva, msg_type: sensor_msgs.msg.NavSatFix }
       launch: novatel_launch 
+      pre_comment: "Ensure antenna is connected before launch."
+      post_comment: "Wait 10 seconds for the GNSS to stabilize."
 
     - name: ublox
       type: usb
@@ -13,6 +15,7 @@ sensors:
       topics:
         - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
       launch: ublox_launch
+      pre_comment: "Mounted near vehicle center for IMU alignment"
 
 
     - name: PacMod
@@ -106,7 +109,14 @@ sensors:
  
     - name: Event_Camera
       type: usb
-      device_path: /dev/prophesee_evk4_device
+      device_path: /dev/prophesee_evk4_device_1
+      topics:
+        - { name: /event_camera/events, msg_type: sensor_msgs.msg.Image }
+      launch: event_camera_launch
+
+    - name: Event_Camera 2 
+      type: usb
+      device_path: /dev/prophesee_evk4_device_2
       topics:
         - { name: /event_camera/events, msg_type: sensor_msgs.msg.Image }
       launch: event_camera_launch
@@ -141,7 +151,7 @@ launch_files:
     open_in_terminal: true
 
   event_camera_launch:
-    command: "ros2 launch metavision_driver driver_node.launch.py"
+    command: "ros2 launch metavision_driver stereo_driver.launch.py"
     open_in_terminal: true
 
   PacMod_launch:
