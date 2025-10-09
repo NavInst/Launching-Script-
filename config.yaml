@@ -9,7 +9,7 @@ sensors:
         - { name: /novatel/oem7/inspva, msg_type: sensor_msgs.msg.NavSatFix }
       launch: novatel_launch 
       # pre_comment: "Ensure antenna is connected before launch."
-      post_comment: "[USERTASK] Open NovatelApplication Suite and make sure the reference solution has converged."
+      post_comment: "[USERTASK] Open NovatelApplication Suite and make sure the reference solution has converged (SPAN+PPP)."
 
     - name: ublox
       type: usb
@@ -17,7 +17,7 @@ sensors:
       topics:
         - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
       launch: ublox_launch
-      pre_comment: "Mounted near vehicle center for IMU alignment"
+      post_comment: "[USERTASK] Check Ublox has converged to acceptable horzontal accuracy. Use this command in a new terminal: ros2 topic echo /ublox_gps_node/navpvt | grep h_acc"
 
 
     - name: PacMod
@@ -133,7 +133,7 @@ launch_files:
     open_in_terminal: true
 
   ublox_launch:
-    command: "ros2 launch ublox_gps ublox_gps_node-launch_NavINST.py"
+    command: "ros2 launch ublox_gps ublox_gps_node-launch_NAVinst.py"
     open_in_terminal: true
 
   radar_launch:
@@ -183,19 +183,32 @@ record_partitions:
       - /xsens/status
       - /xsens/temperature
       # Other GNSS/IMU topics
-      - /imu/rear/data
       - /novatel/oem7/bestgnsspos
       - /novatel/oem7/bestgnssvel
       - /novatel/oem7/bestpos
+      - /novatel/oem7/bestutm
+      - /novatel/oem7/bestvel
+      - /novatel/oem7/corrimu
       - /novatel/oem7/fix
       - /novatel/oem7/gps
+      - /novatel/oem7/heading2
       - /novatel/oem7/imu/data
+      - /novatel/oem7/imu/data_raw
+      - /novatel/oem7/insconfig
       - /novatel/oem7/inspva
       - /novatel/oem7/inspvax
+      - /novatel/oem7/insstdev
+      - /novatel/oem7/odom
+      - /novatel/oem7/odom_origin
+      - /novatel/oem7/oem7raw
+      - /novatel/oem7/ppppos
+      - /novatel/oem7/rawimusx
+      - /novatel/oem7/rxstatus
+      - /novatel/oem7/terrastarinfo
+      - /novatel/oem7/terrastarstatus
       - /novatel/oem7/time
+
       # Ublox topics
-      - /ublox_gps_node/aidalm
-      - /ublox_gps_node/aideph
       - /ublox_gps_node/diagnostics
       - /ublox_gps_node/fix
       - /ublox_gps_node/fix_velocity
@@ -203,16 +216,16 @@ record_partitions:
       - /ublox_gps_node/navclock
       - /ublox_gps_node/navcov
       - /ublox_gps_node/navheading
+      - /ublox_gps_node/navposecef
       - /ublox_gps_node/navpvt
       - /ublox_gps_node/navrelposned
       - /ublox_gps_node/navstate
       - /ublox_gps_node/navstatus
       - /ublox_gps_node/navsvin
       - /ublox_gps_node/nmea
-      - /ublox_gps_node/parameter_events
-      - /ublox_gps_node/rosout
       - /ublox_gps_node/rtcm
       - /ublox_gps_node/rxmrtcm
+
       
       # PacMod 
       - /pacmod/accel_aux_rpt
