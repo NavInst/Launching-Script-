@@ -8,7 +8,33 @@ cd "$(dirname "$0")"
 CONFIG_FILE="config.yaml"
 LAUNCH_DELAY=3
 BAG_RECORDING_DELAY=3
-STORAGE_PATH="/media/navinst/Lex_Data2"
+
+
+# Read storage path from config.yaml
+STORAGE_PATH=$(yq e '.storage_path' "$CONFIG_FILE" 2>/dev/null)
+
+# Fallback if storage path is missing or null
+if [[ -z "$STORAGE_PATH" || "$STORAGE_PATH" == "null" ]]; then
+    echo -e "\e[91m[ERROR]\e[0m Storage path not found in config.yaml (expected key: storage_path)"
+    echo "Please add something like:"
+    echo "  storage_path: /media/navinst/Lex_Backup1"
+    exit 1
+fi
+
+# Function to check if storage path is mounted
+check_storage_mounted() {
+    mountpoint -q "$STORAGE_PATH"
+}
+
+# Wait until storage path is mounted
+until check_storage_mounted; do
+    echo -e "\e[93m[WARNING]\e[0m Storage path not mounted: $STORAGE_PATH"
+    echo "Please make sure the drive is connected and mounted."
+    read -p "Press Enter to retry..."
+done
+
+echo -e "\e[92m✓ Storage path mounted and accessible: $STORAGE_PATH\e[0m"
+
 
 # -----------------------------------------
 # Colors
@@ -21,6 +47,7 @@ YELLOW="\e[93m"
 GREEN="\e[92m"
 RED="\e[91m"
 GRAY="\e[90m"
+
 
 # -----------------------------------------
 # Setup experiment + logging
@@ -39,6 +66,7 @@ LOG_FILE="$LOG_DIR/${EXP_DIR}.log"
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
+
 
 
 print_header() {
@@ -73,18 +101,27 @@ launch_driver() {
     sanitized_name=$(echo "$name" | sed 's/[^a-zA-Z0-9_-]/_/g')
     local tmp_log="/tmp/${sanitized_name}_driver.log"
 
-    gnome-terminal --tab --title="$name" -- bash -c "$cmd 2>&1 | tee $tmp_log" &
+    # 🟢 Modified here
+    gnome-terminal --tab --title="$name" -- bash -i -c "$cmd 2>&1 | tee $tmp_log" &
+
     local term_pid=$!
     driver_terminal_pid_map["$name"]=$term_pid
-    sleep "$LAUNCH_DELAY"
 
     local pid=""
     local i
+    for i in {1..25}; do
+        [[ -f "$tmp_log" ]] && break
+        sleep 0.2
+    done
+
+    # Extract PID from log
     for i in {1..50}; do
-        pid_candidate=$(grep -oP '\[\d{5}\]' "$tmp_log" | head -n1 | tr -d '[]')
-        if [[ -n "$pid_candidate" ]]; then
-            pid="$pid_candidate"
-            break
+        if [[ -f "$tmp_log" ]]; then
+            pid_candidate=$(grep -oP '\[\d+\]' "$tmp_log" | head -n1 | tr -d '[]')
+            if [[ -n "$pid_candidate" ]]; then
+                pid="$pid_candidate"
+                break
+            fi
         fi
         sleep 0.2
     done
@@ -99,8 +136,13 @@ launch_driver() {
         log "Could not find PID for $name from ROS2 logs"
     fi
 
-    rm -f "$tmp_log"
+    if [[ -n "${driver_pid_map[$name]:-}" ]]; then
+        rm -f "$tmp_log"
+    else
+        echo "[ERROR] $name didn't launch properly. Kept driver temp log for debugging: $tmp_log" >> "$LOG_FILE"
+    fi
 }
+
 
 # -----------------------------------------
 # Recording management
@@ -133,13 +175,13 @@ launch_recording() {
     done
 
     if [[ ${#regex_topics[@]} -gt 0 ]]; then
-        rec_cmd="ros2 bag record --storage sqlite3 -o \"$bag_dir\" --regex ${regex_topics[@]}"
+        rec_cmd="ros2 bag record --storage mcap -o \"$bag_dir\" --regex ${regex_topics[@]}"
     else
-        rec_cmd="ros2 bag record --storage sqlite3 -o \"$bag_dir\" ${normal_topics[*]}"
+        rec_cmd="ros2 bag record --storage mcap -o \"$bag_dir\" ${normal_topics[*]}"
     fi
 
     gnome-terminal --tab --title="Recording $partition_name" \
-        -- bash -c "exec setsid $rec_cmd" &
+        -- bash -i -c "exec setsid $rec_cmd" &
     local term_pid=$!
     recorder_terminal_pid_map+=($term_pid)
     record_dirs+=("$bag_dir")
@@ -171,9 +213,9 @@ gui_pid=""
 launch_gui() {
     echo -e "${YELLOW}→ Launching Sensor Dashboard GUI...${RESET}"
     log "Launching Sensor Dashboard GUI"
-    gnome-terminal --tab --title "Sensor Dashboard" -- bash -c "python3 main.py" &
+    gnome-terminal --tab --title "Sensor Dashboard" -- bash -i -c "python3 SensorDashboardGUI.py" &
     sleep "$LAUNCH_DELAY"
-    gui_pid=$(pgrep -f "python3 main.py" | head -n1 || true)
+    gui_pid=$(pgrep -f "python3 SensorDashboardGUI.py" | head -n1 || true)
     log "GUI PID (approx): $gui_pid"
 }
 
@@ -228,7 +270,7 @@ cleanup() {
         echo -e "${CYAN}Cleanup cancelled. Processes are still running.${RESET}"
         return
     fi
-
+    
     log "User confirmed: Stopping all recordings and drivers"
 
     local idx
@@ -274,7 +316,6 @@ for group in $groups; do
     sensor_count=$(yq e ".sensors.$group | length" "$CONFIG_FILE")
     echo "DEBUG: Processing group '$group' with $sensor_count sensors" | tee -a "$LOG_FILE"
 
-    local j
     for ((j=0; j<sensor_count; j++)); do
         echo "DEBUG: ===== Processing sensor index $j in group $group =====" | tee -a "$LOG_FILE"
 

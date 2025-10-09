@@ -1,3 +1,5 @@
+storage_path: /media/navinst/Lex_Data1
+
 sensors:
   obms:
     - name: Novatel PwrPack 7
@@ -6,8 +8,8 @@ sensors:
       topics:
         - { name: /novatel/oem7/inspva, msg_type: sensor_msgs.msg.NavSatFix }
       launch: novatel_launch 
-      pre_comment: "Ensure antenna is connected before launch."
-      post_comment: "Wait 10 seconds for the GNSS to stabilize."
+      # pre_comment: "Ensure antenna is connected before launch."
+      post_comment: "[USERTASK] Open NovatelApplication Suite and make sure the reference solution has converged."
 
     - name: ublox
       type: usb
@@ -111,14 +113,14 @@ sensors:
       type: usb
       device_path: /dev/prophesee_evk4_device_1
       topics:
-        - { name: /event_camera/events, msg_type: sensor_msgs.msg.Image }
+        - { name: /event_cam_left/events, msg_type: sensor_msgs.msg.Image }
       launch: event_camera_launch
 
     - name: Event_Camera 2 
       type: usb
       device_path: /dev/prophesee_evk4_device_2
       topics:
-        - { name: /event_camera/events, msg_type: sensor_msgs.msg.Image }
+        - { name: /event_cam_right/events, msg_type: sensor_msgs.msg.Image }
       launch: event_camera_launch
 
 launch_files:
