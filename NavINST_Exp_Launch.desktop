@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=true
+Exec=bash -i -c "cd /home/navinst/Desktop/Launching-Script--main && ./launch_drivers.sh; exec bash"
+Name=NavINST_Exp_Launch
+Comment=Launch NavINST Experiments
+Icon=/home/navinst/Desktop/Launching-Script--main/navinst_logo.png
+
