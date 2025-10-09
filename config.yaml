@@ -17,7 +17,7 @@ sensors:
       topics:
         - { name: /ublox_gps_node/fix, msg_type: sensor_msgs.msg.NavSatFix }
       launch: ublox_launch
-      post_comment: "[USERTASK] Check Ublox has converged to acceptable horzontal accuracy. Use this command in a new terminal: ros2 topic echo /ublox_gps_node/navpvt | grep h_acc"
+      post_comment: "[USERTASK] Check Ublox has converged to acceptable horzontal accuracy. Use this command in a new terminal: \nros2 topic echo /ublox_gps_node/navpvt | grep h_acc"
 
 
     - name: PacMod
@@ -26,6 +26,8 @@ sensors:
       topics:
         - { name: /pacmod/steering_rpt, msg_type: sensor_msgs.msg.NavSatFix }
       launch: PacMod_launch
+      pre_comment: "[USERTASK] Make sure Pacmod is on and the car lights are Green."
+
       
     - name: xsens
       type: usb
@@ -108,6 +110,7 @@ sensors:
       topics:
         - { name: /oak/imu/data, msg_type: sensor_msgs.msg.Imu}
       launch: camera_launch
+      post_comment: "[USERTASK] Optionally: You can visualize the images to make sure the camera is fine. \n Use the following command : \nrviz2 -d \"/home/navinst/Desktop/Launching-Script--main/rviz configs/OAK_LR_Visualization.rviz\""
  
     - name: Event_Camera
       type: usb
@@ -278,7 +281,8 @@ record_partitions:
       - /oak/rgb/image_raw/compressed
       - /oak/right/camera_info
       - /oak/right/image_raw/compressed
-      - /event_camera/events
+      - /event_cam_left/events
+      - /event_cam_right/events
 
   radars:
     topics:
